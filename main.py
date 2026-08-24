@@ -4,6 +4,7 @@ from maze import generate_maze
 from world import World
 from sensor import CardinalSensor
 from brain import RuleBasedBrain
+from mapper import Mapper
 
 
 # --------------------------------------------------
@@ -76,6 +77,10 @@ def main():
 
     # Create brain
     brain = RuleBasedBrain()
+    mapper = Mapper()
+
+    start_time = time.time()
+    steps = 0
 
     while True:
 
@@ -94,6 +99,11 @@ def main():
         # -------------------------
 
         vision = sensor.scan()
+        # Update Pac-Bot's internal map
+        exploration_reward, new_cells = mapper.update(
+            vision,
+            world.pacman_position
+        )
 
         print("\nPac-Man vision:")
 
@@ -111,6 +121,9 @@ def main():
 
         print()
         print("Brain decision:", action)
+        print("New area discovered:", new_cells)
+        print("Exploration reward:", exploration_reward)
+        
 
 
         # -------------------------
@@ -123,8 +136,11 @@ def main():
 
         success, reward, done = world.move_pacman(action)
 
-        print("Reward:", reward)
+        if success:
+            steps += 1
 
+        print("Reward:", reward)
+        print("Ghost danger:", world.ghost_danger_reward())
         # -------------------------
         # MOVE GHOSTS
         # -------------------------
@@ -137,6 +153,9 @@ def main():
 
         if world.check_ghost_collision():
 
+            end_time = time.time()
+            total_time = end_time - start_time
+
             clear_screen()
 
             print("========== PAC-BOT ==========\n")
@@ -145,7 +164,9 @@ def main():
 
             print()
             print("💀 PAC-MAN WAS CAUGHT BY A GHOST!")
-            print("Reward:", -100)
+            print("Reward: -100")
+            print(f"Total time: {total_time:.2f} seconds")
+            print(f"Total steps: {steps}")
 
             break
 
@@ -164,6 +185,10 @@ def main():
             print()
             print("🚪 PAC-MAN REACHED THE EXIT!")
             print("Reward:", reward)
+            end_time = time.time()
+            total_time = end_time - start_time
+            print(f"Total time: {total_time:.2f} seconds")
+            print(f"Total steps: {steps}")
 
             break
 

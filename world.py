@@ -17,6 +17,11 @@ class World:
         # Number of objects
         self.num_ghosts = 3
         self.num_pellets = 30
+        # Ghost AI memory
+        self.ghost_last_known = [None] * self.num_ghosts
+
+        # Ghosts move slower than Pac-Man
+        self.ghost_tick = 0
 
         # Spawn them
         self.add_ghosts()
@@ -101,6 +106,34 @@ class World:
             return False
 
         return True
+    
+    def ghost_danger_reward(self):
+        """Return a penalty based on how close the nearest ghost is."""
+
+        if not self.ghost_positions:
+            return 0
+
+        px, py = self.pacman_position
+
+        # Find distance to nearest ghost
+        distances = []
+
+        for gx, gy in self.ghost_positions:
+            distance = abs(px - gx) + abs(py - gy)
+            distances.append(distance)
+
+        nearest = min(distances)
+
+        if nearest == 1:
+            return -5.0
+
+        elif nearest == 2:
+            return -2.0
+
+        elif nearest == 3:
+            return -0.5
+
+        return 0
 
     def move_pacman(self, direction):
         moves = {
@@ -136,6 +169,12 @@ class World:
         # Move Pac-Man
         self.pacman_position = (new_x, new_y)
 
+
+        # -------------------------
+        # Ghost danger
+        # -------------------------
+
+        reward += self.ghost_danger_reward()
         # -------------------------
         # Collect pellet
         # -------------------------
@@ -181,49 +220,167 @@ class World:
 
         return neighbors
 
-    def move_ghosts(self):
-        """Move all ghosts randomly."""
+    def ghost_can_see_pacman(self, ghost_position):
+        """Check whether a ghost can directly see Pac-Man."""
 
-        directions = {
-            "UP": (0, -1),
-            "DOWN": (0, 1),
-            "LEFT": (-1, 0),
-            "RIGHT": (1, 0)
-        }
+        gx, gy = ghost_position
+        px, py = self.pacman_position
+
+        # Same row
+        if gy == py:
+
+            step = 1 if px > gx else -1
+
+            for x in range(gx + step, px, step):
+
+                if self.maze[gy][x] == "#":
+                    return False
+
+            return True
+
+        # Same column
+        if gx == px:
+
+            step = 1 if py > gy else -1
+
+            for y in range(gy + step, py, step):
+
+                if self.maze[y][gx] == "#":
+                    return False
+
+            return True
+
+        return False
+
+
+    def move_ghost_toward(self, ghost_position, target, occupied):
+        """Move a ghost one step toward a target."""
+
+        gx, gy = ghost_position
+        tx, ty = target
+
+        possible_moves = []
+
+        # Try directions that reduce distance to target first
+        candidates = [
+            (gx + (1 if tx > gx else -1), gy),
+            (gx, gy + (1 if ty > gy else -1))
+        ]
+
+        # Add other directions as fallback
+        candidates += [
+            (gx + 1, gy),
+            (gx - 1, gy),
+            (gx, gy + 1),
+            (gx, gy - 1)
+        ]
+
+        for new_x, new_y in candidates:
+
+            # Outside maze
+            if new_y < 0 or new_y >= len(self.maze):
+                continue
+
+            if new_x < 0 or new_x >= len(self.maze[0]):
+                continue
+
+            # Wall
+            if self.maze[new_y][new_x] == "#":
+                continue
+
+            # Another ghost
+            if (new_x, new_y) in occupied:
+                continue
+
+            return (new_x, new_y)
+
+        return ghost_position
+
+
+    def move_ghosts(self):
+        """Move ghosts using limited vision and memory."""
+
+        directions = [
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1)
+        ]
+
+        # Ghosts move every second Pac-Man turn
+        self.ghost_tick += 1
+
+        if self.ghost_tick % 2 != 0:
+            return
 
         new_positions = []
 
-        for ghost_x, ghost_y in self.ghost_positions:
+        for i, ghost_position in enumerate(self.ghost_positions):
 
-            possible_moves = []
+            # -----------------------------------------
+            # SEE PAC-MAN
+            # -----------------------------------------
 
-            for dx, dy in directions.values():
+            if self.ghost_can_see_pacman(ghost_position):
 
-                new_x = ghost_x + dx
-                new_y = ghost_y + dy
+                # Remember where Pac-Man was seen
+                self.ghost_last_known[i] = self.pacman_position
 
-                # Outside maze
-                if new_y < 0 or new_y >= len(self.maze):
-                    continue
+            target = self.ghost_last_known[i]
 
-                if new_x < 0 or new_x >= len(self.maze[0]):
-                    continue
+            # -----------------------------------------
+            # CHASE / SEARCH
+            # -----------------------------------------
 
-                # Wall
-                if self.maze[new_y][new_x] == "#":
-                    continue
+            if target is not None:
 
-                # Don't move onto another ghost
-                if (new_x, new_y) in new_positions:
-                    continue
+                new_position = self.move_ghost_toward(
+                    ghost_position,
+                    target,
+                    new_positions
+                )
 
-                possible_moves.append((new_x, new_y))
+                # Reached the last known position
+                if new_position == target:
 
-            # Move randomly if possible
-            if possible_moves:
-                new_position = random.choice(possible_moves)
+                    self.ghost_last_known[i] = None
+
+            # -----------------------------------------
+            # RANDOM WANDER
+            # -----------------------------------------
+
             else:
-                new_position = (ghost_x, ghost_y)
+
+                possible_moves = []
+
+                gx, gy = ghost_position
+
+                for dx, dy in directions:
+
+                    new_x = gx + dx
+                    new_y = gy + dy
+
+                    # Outside maze
+                    if new_y < 0 or new_y >= len(self.maze):
+                        continue
+
+                    if new_x < 0 or new_x >= len(self.maze[0]):
+                        continue
+
+                    # Wall
+                    if self.maze[new_y][new_x] == "#":
+                        continue
+
+                    # Don't overlap another ghost
+                    if (new_x, new_y) in new_positions:
+                        continue
+
+                    possible_moves.append((new_x, new_y))
+
+                if possible_moves:
+                    new_position = random.choice(possible_moves)
+                else:
+                    new_position = ghost_position
 
             new_positions.append(new_position)
 
