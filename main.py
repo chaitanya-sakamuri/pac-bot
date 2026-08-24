@@ -112,20 +112,29 @@ def main():
         print()
         print("Brain decision:", action)
 
+
         # -------------------------
-        # MOVE
+        # MOVE PAC-MAN
         # -------------------------
 
         if action is None:
             print("\nNo possible moves!")
             break
 
-        world.move_pacman(action)
+        success, reward, done = world.move_pacman(action)
 
-        # Move ghosts after Pac-Man moves
+        print("Reward:", reward)
+
+        # -------------------------
+        # MOVE GHOSTS
+        # -------------------------
+
         world.move_ghosts()
 
-        # Check collision
+        # -------------------------
+        # CHECK GHOST COLLISION
+        # -------------------------
+
         if world.check_ghost_collision():
 
             clear_screen()
@@ -136,6 +145,25 @@ def main():
 
             print()
             print("💀 PAC-MAN WAS CAUGHT BY A GHOST!")
+            print("Reward:", -100)
+
+            break
+
+        # -------------------------
+        # CHECK EXIT
+        # -------------------------
+
+        if done:
+
+            clear_screen()
+
+            print("========== PAC-BOT ==========\n")
+
+            display_world(world)
+
+            print()
+            print("🚪 PAC-MAN REACHED THE EXIT!")
+            print("Reward:", reward)
 
             break
 

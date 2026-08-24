@@ -111,7 +111,7 @@ class World:
         }
 
         if direction not in moves:
-            return False
+            return False, -0.1, False
 
         dx, dy = moves[direction]
 
@@ -122,7 +122,13 @@ class World:
 
         # Can't move through walls or ghosts
         if not self.is_walkable(new_x, new_y):
-            return False
+            return False, -0.1, False
+
+        # -------------------------
+        # Base movement penalty
+        # -------------------------
+
+        reward = -0.1
 
         # Remove Pac-Man from old position
         self.maze[y][x] = "."
@@ -130,14 +136,26 @@ class World:
         # Move Pac-Man
         self.pacman_position = (new_x, new_y)
 
+        # -------------------------
         # Collect pellet
+        # -------------------------
+
         if (new_x, new_y) in self.pellets:
             self.pellets.remove((new_x, new_y))
+            reward += 10
 
         # Mark Pac-Man's new position
         self.maze[new_y][new_x] = "P"
 
-        return True
+        # -------------------------
+        # Reach exit
+        # -------------------------
+
+        if (new_x, new_y) == self.exit_position:
+            reward += 100
+            return True, reward, True
+
+        return True, reward, False
 
     def get_neighbors(self):
         """Return all directions Pac-Man can currently move."""
