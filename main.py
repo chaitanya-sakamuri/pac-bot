@@ -1,10 +1,9 @@
-import sys
-import termios
-import tty
+import time
 
 from maze import generate_maze
 from world import World
 from sensor import CardinalSensor
+from brain import RuleBasedBrain
 
 
 # --------------------------------------------------
@@ -31,71 +30,35 @@ def clear_screen():
 
 def display_world(world):
 
-    # Copy the maze so the original maze is never changed
     display = [row[:] for row in world.maze]
 
-    # Remove old dynamic objects from the copied maze
-    # P, G and E should NOT permanently exist in the maze.
+    # Remove dynamic objects
     for y in range(len(display)):
         for x in range(len(display[y])):
             if display[y][x] in ("P", "G", "E"):
                 display[y][x] = "."
 
-    # -------------------------
-    # Draw pellets
-    # -------------------------
-
+    # Pellets
     for x, y in world.pellets:
         display[y][x] = f"{YELLOW}o{RESET}"
 
-    # -------------------------
-    # Draw ghosts
-    # -------------------------
-
+    # Ghosts
     for x, y in world.ghost_positions:
         if (x, y) != world.pacman_position:
             display[y][x] = f"{RED}G{RESET}"
 
-    # -------------------------
-    # Draw exit
-    # -------------------------
-
+    # Exit
     ex, ey = world.exit_position
 
     if (ex, ey) != world.pacman_position:
         display[ey][ex] = f"{GREEN}E{RESET}"
 
-    # -------------------------
-    # Draw Pac-Man LAST
-    # -------------------------
-
+    # Pac-Man
     px, py = world.pacman_position
     display[py][px] = f"{RED}P{RESET}"
 
-    # Print maze
     for row in display:
         print("".join(row))
-
-
-# --------------------------------------------------
-# GET ONE KEY WITHOUT ENTER
-# --------------------------------------------------
-
-def get_key():
-
-    old_settings = termios.tcgetattr(sys.stdin)
-
-    try:
-        tty.setraw(sys.stdin.fileno())
-        key = sys.stdin.read(1)
-    finally:
-        termios.tcsetattr(
-            sys.stdin,
-            termios.TCSADRAIN,
-            old_settings
-        )
-
-    return key
 
 
 # --------------------------------------------------
@@ -104,65 +67,64 @@ def get_key():
 
 def main():
 
-    # Generate ONE maze
-    maze = generate_maze()
-
     # Create ONE world
+    maze = generate_maze()
     world = World(maze)
 
-    # Sensor connected to THIS world
-    sensor = CardinalSensor(world)
+    # Create sensor
+    sensor = CardinalSensor(world, max_range=8)
+
+    # Create brain
+    brain = RuleBasedBrain()
 
     while True:
 
-        # Redraw the same screen
         clear_screen()
 
         print("========== PAC-BOT ==========\n")
 
-        # Draw current world
         display_world(world)
 
         print()
         print("Pac-Man position:", world.pacman_position)
         print("Pellets remaining:", len(world.pellets))
 
-        print()
-        print("Pac-Man vision:")
+        # -------------------------
+        # SENSOR
+        # -------------------------
 
         vision = sensor.scan()
+
+        print("\nPac-Man vision:")
 
         for direction, data in vision.items():
             print(f"{direction}: {data}")
 
+        # -------------------------
+        # BRAIN
+        # -------------------------
+
+        action = brain.choose_action(
+            vision,
+            world.pacman_position
+        )
+
         print()
-        print("W/A/S/D = Move    Q = Quit")
-        print("> ", end="", flush=True)
+        print("Brain decision:", action)
 
-        # Read ONE key immediately
-        command = get_key().lower()
+        # -------------------------
+        # MOVE
+        # -------------------------
 
-        # Quit
-        if command == "q":
+        if action is None:
+            print("\nNo possible moves!")
             break
 
-        # Keyboard → world direction
-        directions = {
-            "w": "UP",
-            "s": "DOWN",
-            "a": "LEFT",
-            "d": "RIGHT"
-        }
+        world.move_pacman(action)
 
-        if command in directions:
+        # Small delay so we can watch it
+        time.sleep(0.15)
 
-            direction = directions[command]
-
-            # Move Pac-Man
-            world.move_pacman(direction)
-
-
-# --------------------------------------------------
 
 if __name__ == "__main__":
     main()

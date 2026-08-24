@@ -102,15 +102,25 @@ class World:
 
         return True
 
-    def move_pacman(self, dx, dy):
-        """Try to move Pac-Man."""
+    def move_pacman(self, direction):
+        moves = {
+            "UP": (0, -1),
+            "DOWN": (0, 1),
+            "LEFT": (-1, 0),
+            "RIGHT": (1, 0)
+        }
+
+        if direction not in moves:
+            return False
+
+        dx, dy = moves[direction]
 
         x, y = self.pacman_position
 
         new_x = x + dx
         new_y = y + dy
 
-        # Check movement
+        # Can't move through walls or ghosts
         if not self.is_walkable(new_x, new_y):
             return False
 
@@ -120,23 +130,11 @@ class World:
         # Move Pac-Man
         self.pacman_position = (new_x, new_y)
 
-        # Check for pellet
+        # Collect pellet
         if (new_x, new_y) in self.pellets:
-
             self.pellets.remove((new_x, new_y))
 
-            print("🍴 Pac-Man collected a pellet!")
-
-        # Check exit
-        if (new_x, new_y) == self.exit_position:
-
-            self.maze[new_y][new_x] = "P"
-
-            print("🚪 Pac-Man reached the exit!")
-
-            return True
-
-        # Put Pac-Man in new position
+        # Mark Pac-Man's new position
         self.maze[new_y][new_x] = "P"
 
         return True
@@ -165,36 +163,7 @@ class World:
 
         return neighbors
     
-    def move_pacman(self, direction):
-        moves = {
-            "UP": (0, -1),
-            "DOWN": (0, 1),
-            "LEFT": (-1, 0),
-            "RIGHT": (1, 0)
-        }
-
-        if direction not in moves:
-            return False
-
-        dx, dy = moves[direction]
-
-        x, y = self.pacman_position
-
-        new_x = x + dx
-        new_y = y + dy
-
-        # Can't move through walls
-        if not self.is_walkable(new_x, new_y):
-            return False
-
-        # Move Pac-Man
-        self.pacman_position = (new_x, new_y)
-
-        # Collect pellet
-        if (new_x, new_y) in self.pellets:
-            self.pellets.remove((new_x, new_y))
-
-        return True
+    
 
 
 # --------------------------------------------------

@@ -24,14 +24,23 @@ class CardinalSensor:
             ):
                 break
 
-            cell = self.world.maze[new_y][new_x]
-
             # Wall blocks vision
-            if cell == "#":
+            if self.world.maze[new_y][new_x] == "#":
                 vision.append("#")
                 break
 
-            vision.append(cell)
+            # Ghost
+            if (new_x, new_y) in self.world.ghost_positions:
+                vision.append("G")
+                continue
+
+            # Pellet
+            if (new_x, new_y) in self.world.pellets:
+                vision.append("o")
+                continue
+
+            # Empty floor
+            vision.append(".")
 
         return vision
 
