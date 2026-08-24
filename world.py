@@ -162,8 +162,60 @@ class World:
                 neighbors[direction] = (new_x, new_y)
 
         return neighbors
-    
-    
+
+    def move_ghosts(self):
+        """Move all ghosts randomly."""
+
+        directions = {
+            "UP": (0, -1),
+            "DOWN": (0, 1),
+            "LEFT": (-1, 0),
+            "RIGHT": (1, 0)
+        }
+
+        new_positions = []
+
+        for ghost_x, ghost_y in self.ghost_positions:
+
+            possible_moves = []
+
+            for dx, dy in directions.values():
+
+                new_x = ghost_x + dx
+                new_y = ghost_y + dy
+
+                # Outside maze
+                if new_y < 0 or new_y >= len(self.maze):
+                    continue
+
+                if new_x < 0 or new_x >= len(self.maze[0]):
+                    continue
+
+                # Wall
+                if self.maze[new_y][new_x] == "#":
+                    continue
+
+                # Don't move onto another ghost
+                if (new_x, new_y) in new_positions:
+                    continue
+
+                possible_moves.append((new_x, new_y))
+
+            # Move randomly if possible
+            if possible_moves:
+                new_position = random.choice(possible_moves)
+            else:
+                new_position = (ghost_x, ghost_y)
+
+            new_positions.append(new_position)
+
+        self.ghost_positions = new_positions
+
+    def check_ghost_collision(self):
+        """Check whether Pac-Man is touching a ghost."""
+
+        return self.pacman_position in self.ghost_positions
+        
 
 
 # --------------------------------------------------

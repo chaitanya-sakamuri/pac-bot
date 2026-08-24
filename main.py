@@ -122,7 +122,23 @@ def main():
 
         world.move_pacman(action)
 
-        # Small delay so we can watch it
+        # Move ghosts after Pac-Man moves
+        world.move_ghosts()
+
+        # Check collision
+        if world.check_ghost_collision():
+
+            clear_screen()
+
+            print("========== PAC-BOT ==========\n")
+
+            display_world(world)
+
+            print()
+            print("💀 PAC-MAN WAS CAUGHT BY A GHOST!")
+
+            break
+
         time.sleep(0.15)
 
 

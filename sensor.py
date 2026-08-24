@@ -4,6 +4,23 @@ class CardinalSensor:
         self.world = world
         self.max_range = max_range
 
+    def get_cell(self, x, y):
+
+        # Ghost
+        if (x, y) in self.world.ghost_positions:
+            return "G"
+
+        # Pellet
+        if (x, y) in self.world.pellets:
+            return "o"
+
+        # Exit
+        if (x, y) == self.world.exit_position:
+            return "E"
+
+        # Normal maze cell
+        return self.world.maze[y][x]
+
     def scan_direction(self, dx, dy):
 
         x, y = self.world.pacman_position
@@ -15,7 +32,7 @@ class CardinalSensor:
             new_x = x + dx * distance
             new_y = y + dy * distance
 
-            # Outside the maze
+            # Outside maze
             if (
                 new_x < 0
                 or new_x >= len(self.world.maze[0])
@@ -24,23 +41,14 @@ class CardinalSensor:
             ):
                 break
 
+            cell = self.get_cell(new_x, new_y)
+
             # Wall blocks vision
-            if self.world.maze[new_y][new_x] == "#":
+            if cell == "#":
                 vision.append("#")
                 break
 
-            # Ghost
-            if (new_x, new_y) in self.world.ghost_positions:
-                vision.append("G")
-                continue
-
-            # Pellet
-            if (new_x, new_y) in self.world.pellets:
-                vision.append("o")
-                continue
-
-            # Empty floor
-            vision.append(".")
+            vision.append(cell)
 
         return vision
 
