@@ -2,7 +2,8 @@
 
 > An intelligent Pac-Man agent that builds its own internal map, navigates using A*, explores unknown areas, reacts to ghosts, and learns ghost-avoidance behavior through Q-learning.
 
-![PacBot Demo](assets/pacbot.gif)
+<img width="309" height="187" alt="pacbot" src="https://github.com/user-attachments/assets/c55b7ab7-5a4e-46fd-9ce0-3c751cd84d02" />
+
 
 ---
 
@@ -33,7 +34,7 @@ The goal is to create an agent that can:
 
 ## 🎥 Demo
 
-![PacBot Demo](assets/pacbot.gif)
+<img width="309" height="187" alt="pacbot" src="https://github.com/user-attachments/assets/deecbc28-4d35-47d0-ab1e-8479775443af" />
 
 PacBot explores a procedurally generated maze while maintaining an internal representation of the environment and reacting to dynamically moving ghosts.
 
